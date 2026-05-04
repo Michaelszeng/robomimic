@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=evaluate_checkpoints
 #SBATCH --account=locomotion
-#SBATCH --partition=vision-shared-titanrtx
+#SBATCH --partition=vision-shared-rtx3090
 #SBATCH --exclude=freeman-titanrtx-2,freeman-titanrtx-1,oliva-titanrtx-3
 #SBATCH --qos=shared-if-available
 #SBATCH --nodes=1
@@ -15,13 +15,11 @@
 #SBATCH --requeue
 
 # Usage:
-#   sbatch robomimic/scripts/submit_evaluate_checkpoints.sbatch <horizon> <n_action_steps>
+#   sbatch robomimic/scripts/submit_evaluate_checkpoints.sbatch <n_action_steps>
 #
 # SLURM runner for `evaluate_checkpoints.sh`.
 
-
-HORIZON="${1:?Usage: sbatch robomimic/scripts/submit_evaluate_checkpoints.sbatch <horizon> <n_action_steps>}"
-N_ACTION_STEPS="${2:?Usage: sbatch robomimic/scripts/submit_evaluate_checkpoints.sbatch <horizon> <n_action_steps>}"
+N_ACTION_STEPS="${1:?Usage: sbatch robomimic/scripts/submit_evaluate_checkpoints.sbatch <n_action_steps>}"
 
 DATE=$(date +"%Y-%m-%d")
 TIME=$(date +"%H-%M-%S")
@@ -42,9 +40,11 @@ CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/out
 # CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/16_obs_tool_hang_double_enc/checkpoints"
 # CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/20_obs_tool_hang_double_enc/checkpoints"
 
-N_ENVS=32
+N_ENVS=16
 N_ROLLOUTS=500
 N_VIDEO_TRIALS=20
+
+HORIZON=450
 # ============================================================================
 
 EXPERIMENT_NAME="$(basename "$(dirname "${CHECKPOINT_PATH}")")"

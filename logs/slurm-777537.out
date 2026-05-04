@@ -1,0 +1,125 @@
+DATE: 2026-05-04
+TIME: 03-53-17
+HORIZON: 
+N_ACTION_STEPS: 6
+EXPERIMENT_NAME: 2_obs_tool_hang_film
+SLURM Job ID: 777537
+SLURM Node: improbablex004
+CUDA_VISIBLE_DEVICES: 0
+SLURM_SUBMIT_DIR: /data/locomotion/michzeng/robomimic
+Changing directory to /data/locomotion/michzeng/robomimic
+CUDA_VISIBLE_DEVICES after activate: 0
+CHECKPOINT_PATH: /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/checkpoints
+HORIZON:         450
+N_ACTION_STEPS:  6
+N_ENVS:          16
+N_ROLLOUTS:      500
+N_VIDEO_TRIALS:  20
+==========================================
+Base output directory: outputs/2_obs_tool_hang_film
+Checkpoints found: 5
+
+########################################## 
+Checkpoint: epoch=050-val_loss=0.0540-val_ddim_mse=0.042967
+Action horizon: 6  ->  outputs/2_obs_tool_hang_film/T_a_6/epoch=050-val_loss=0.0540-val_ddim_mse=0.042967
+##########################################
+ROBOMIMIC WARNING(
+    No private macro file found!
+    It is recommended to use a private macro file
+    To setup, run: python /data/locomotion/michzeng/robomimic/robomimic/scripts/setup_macros.py
+)
+Loading policy from /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/checkpoints/epoch=050-val_loss=0.0540-val_ddim_mse=0.042967.ckpt
+
+============= Initialized Observation Utils with Obs Spec =============
+
+using obs modality: low_dim with keys: ['robot0_gripper_qpos', 'robot0_eef_quat', 'robot0_eef_pos']
+using obs modality: rgb with keys: ['robot0_eye_in_hand_image', 'sideview_image']
+using obs modality: depth with keys: []
+using obs modality: scan with keys: []
+Input dim: 7, Global cond dim: 274
+Diffusion params: 6.691802e+07
+Observation Encoder params: 2.239418e+07
+Initializing model using default parameters.
+Loading normalizer from /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/normalizer.pt
+n_obs_steps=2, n_action_steps=6, obs_keys=['robot0_eef_pos', 'robot0_eef_quat', 'robot0_eye_in_hand_image', 'robot0_gripper_qpos', 'sideview_image'], camera_names=['sideview', 'robot0_eye_in_hand']
+Loading env metadata from dataset: /home/michzeng/diffusion-policy/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5
+
+########################################## 
+Checkpoint: epoch=075-val_loss=0.0738-val_ddim_mse=0.044500
+Action horizon: 6  ->  outputs/2_obs_tool_hang_film/T_a_6/epoch=075-val_loss=0.0738-val_ddim_mse=0.044500
+##########################################
+ROBOMIMIC WARNING(
+    No private macro file found!
+    It is recommended to use a private macro file
+    To setup, run: python /data/locomotion/michzeng/robomimic/robomimic/scripts/setup_macros.py
+)
+Loading policy from /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/checkpoints/epoch=075-val_loss=0.0738-val_ddim_mse=0.044500.ckpt
+
+============= Initialized Observation Utils with Obs Spec =============
+
+using obs modality: low_dim with keys: ['robot0_eef_quat', 'robot0_gripper_qpos', 'robot0_eef_pos']
+using obs modality: rgb with keys: ['robot0_eye_in_hand_image', 'sideview_image']
+using obs modality: depth with keys: []
+using obs modality: scan with keys: []
+Input dim: 7, Global cond dim: 274
+Diffusion params: 6.691802e+07
+Observation Encoder params: 2.239418e+07
+Initializing model using default parameters.
+Loading normalizer from /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/normalizer.pt
+n_obs_steps=2, n_action_steps=6, obs_keys=['robot0_eef_pos', 'robot0_eef_quat', 'robot0_eye_in_hand_image', 'robot0_gripper_qpos', 'sideview_image'], camera_names=['sideview', 'robot0_eye_in_hand']
+Loading env metadata from dataset: /home/michzeng/diffusion-policy/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5
+
+########################################## 
+Checkpoint: epoch=115-val_loss=0.1124-val_ddim_mse=0.045645
+Action horizon: 6  ->  outputs/2_obs_tool_hang_film/T_a_6/epoch=115-val_loss=0.1124-val_ddim_mse=0.045645
+##########################################
+ROBOMIMIC WARNING(
+    No private macro file found!
+    It is recommended to use a private macro file
+    To setup, run: python /data/locomotion/michzeng/robomimic/robomimic/scripts/setup_macros.py
+)
+Loading policy from /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/checkpoints/epoch=115-val_loss=0.1124-val_ddim_mse=0.045645.ckpt
+
+============= Initialized Observation Utils with Obs Spec =============
+
+using obs modality: low_dim with keys: ['robot0_gripper_qpos', 'robot0_eef_pos', 'robot0_eef_quat']
+using obs modality: rgb with keys: ['sideview_image', 'robot0_eye_in_hand_image']
+using obs modality: depth with keys: []
+using obs modality: scan with keys: []
+Input dim: 7, Global cond dim: 274
+Diffusion params: 6.691802e+07
+Observation Encoder params: 2.239418e+07
+Initializing model using default parameters.
+Loading normalizer from /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/normalizer.pt
+n_obs_steps=2, n_action_steps=6, obs_keys=['robot0_eef_pos', 'robot0_eef_quat', 'robot0_eye_in_hand_image', 'robot0_gripper_qpos', 'sideview_image'], camera_names=['sideview', 'robot0_eye_in_hand']
+Loading env metadata from dataset: /home/michzeng/diffusion-policy/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5
+
+########################################## 
+Checkpoint: epoch=120-val_loss=0.1104-val_ddim_mse=0.045748
+Action horizon: 6  ->  outputs/2_obs_tool_hang_film/T_a_6/epoch=120-val_loss=0.1104-val_ddim_mse=0.045748
+##########################################
+ROBOMIMIC WARNING(
+    No private macro file found!
+    It is recommended to use a private macro file
+    To setup, run: python /data/locomotion/michzeng/robomimic/robomimic/scripts/setup_macros.py
+)
+Loading policy from /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/checkpoints/epoch=120-val_loss=0.1104-val_ddim_mse=0.045748.ckpt
+
+============= Initialized Observation Utils with Obs Spec =============
+
+using obs modality: low_dim with keys: ['robot0_eef_pos', 'robot0_eef_quat', 'robot0_gripper_qpos']
+using obs modality: rgb with keys: ['robot0_eye_in_hand_image', 'sideview_image']
+using obs modality: depth with keys: []
+using obs modality: scan with keys: []
+Input dim: 7, Global cond dim: 274
+Diffusion params: 6.691802e+07
+Observation Encoder params: 2.239418e+07
+Initializing model using default parameters.
+Loading normalizer from /data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/normalizer.pt
+n_obs_steps=2, n_action_steps=6, obs_keys=['robot0_eef_pos', 'robot0_eef_quat', 'robot0_eye_in_hand_image', 'robot0_gripper_qpos', 'sideview_image'], camera_names=['sideview', 'robot0_eye_in_hand']
+Loading env metadata from dataset: /home/michzeng/diffusion-policy/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5
+
+########################################## 
+Checkpoint: epoch=135-val_loss=0.1393-val_ddim_mse=0.046313
+Action horizon: 6  ->  outputs/2_obs_tool_hang_film/T_a_6/epoch=135-val_loss=0.1393-val_ddim_mse=0.046313
+##########################################
