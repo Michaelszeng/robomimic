@@ -21,6 +21,7 @@ import argparse
 import collections
 import csv
 import datetime
+import multiprocessing as mp
 import os
 import pickle
 import time
@@ -226,6 +227,81 @@ def run_rollout(
 
 
 # ---------------------------------------------------------------------------
+# Parallel worker (must be module-level for multiprocessing spawn pickling)
+# ---------------------------------------------------------------------------
+
+# Per-worker state populated by _init_worker in each subprocess.
+_worker_state: dict = {}
+
+
+def _init_worker(
+    checkpoint_path,
+    dataset_path,
+    env_name,
+    is_image_policy,
+    horizon,
+    n_obs_steps,
+    policy_obs_keys,
+    n_action_steps,
+    camera_names,
+    device_str,
+    save_video,
+):
+    """Pool initializer: load policy + env once per worker process."""
+    global _worker_state
+    # Seed each worker differently so rollouts diverge.
+    worker_seed = SEED + os.getpid()
+    np.random.seed(worker_seed)
+    torch.manual_seed(worker_seed)
+
+    device = torch.device(device_str)
+    policy, _ = load_policy(checkpoint_path, device)
+
+    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
+    env = EnvUtils.create_env_from_metadata(
+        env_meta=env_meta,
+        env_name=env_name,
+        render=False,  # on-screen rendering is not supported in worker processes
+        render_offscreen=save_video,
+        use_image_obs=is_image_policy,
+    )
+
+    _worker_state.update(
+        {
+            "env": env,
+            "policy": policy,
+            "device": device,
+            "horizon": horizon,
+            "n_obs_steps": n_obs_steps,
+            "obs_keys": policy_obs_keys,
+            "n_action_steps": n_action_steps,
+            "camera_names": camera_names,
+        }
+    )
+
+
+def _worker_run_rollout(record_video: bool) -> dict:
+    """Called in each worker process to run one rollout."""
+    s = _worker_state
+    result = run_rollout(
+        env=s["env"],
+        policy=s["policy"],
+        n_obs_steps=s["n_obs_steps"],
+        horizon=s["horizon"],
+        device=s["device"],
+        obs_keys=s["obs_keys"],
+        n_action_steps=s["n_action_steps"],
+        render=False,
+        record_video=record_video,
+        camera_names=s["camera_names"],
+    )
+    # Carry record_video through so the main process knows whether frames exist,
+    # since results arrive out of order with imap_unordered.
+    result["_record_flag"] = record_video
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
 
@@ -275,6 +351,13 @@ if __name__ == "__main__":
         help="Override the env name embedded in the training dataset metadata",
     )
     parser.add_argument("--headless", action="store_true", default=False)
+    parser.add_argument(
+        "--n-envs",
+        type=int,
+        default=1,
+        help="Number of parallel worker processes. Each loads its own policy+env copy. "
+        "Requires --headless (on-screen rendering is incompatible with workers).",
+    )
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument(
         "--n-action-steps",
@@ -312,6 +395,9 @@ if __name__ == "__main__":
 
     if args.resume and args.output_dir is None:
         parser.error("--resume requires --output-dir to be specified")
+    if args.n_envs > 1 and not args.headless:
+        print("WARNING: --n-envs > 1 is incompatible with on-screen rendering; forcing headless.")
+        args.headless = True
 
     device = torch.device(args.device)
 
@@ -403,31 +489,14 @@ if __name__ == "__main__":
     # --- rollout loop ---
     video_budget = args.n_video_trials if args.n_video_trials >= 0 else args.n_rollouts
 
-    for i in range(n_total, args.n_rollouts):
-        t_start = time.time()
-
+    def _record_this(trial_idx_0based: int) -> bool:
         if args.record_failures:
-            record_this_trial = args.save_video
-        else:
-            record_this_trial = args.save_video and (n_total < video_budget)
+            return args.save_video
+        return args.save_video and (trial_idx_0based < video_budget)
 
-        rollout_result = run_rollout(
-            env=env,
-            policy=policy,
-            n_obs_steps=n_obs_steps,
-            horizon=args.horizon,
-            device=device,
-            obs_keys=policy_obs_keys,
-            n_action_steps=n_action_steps,
-            render=not args.headless,
-            record_video=record_this_trial,
-            camera_names=camera_names,
-        )
-
+    def _process_result(rollout_result: dict, record_flag: bool, n_success: int, n_total: int):
         n_success += int(rollout_result["success"])
         n_total += 1
-        elapsed = time.time() - t_start
-        success_rate = n_success / n_total
         result_str = rollout_result["result"]
 
         record = {
@@ -437,30 +506,11 @@ if __name__ == "__main__":
             "steps": rollout_result["steps"],
         }
         all_trial_records.append(record)
-
         csv_writer.writerow(record)
-        csv_file.flush()
 
-        _write_summary(n_success, n_total, args.n_rollouts, all_trial_records, summary_path)
-
-        pkl_path = out_dir / "results.pkl"
-        with open(pkl_path, "wb") as f:
-            pickle.dump(
-                {
-                    "trials": all_trial_records,
-                    "n_success": n_success,
-                    "n_total": n_total,
-                    "success_rate": success_rate,
-                    "checkpoint": args.checkpoint,
-                    "horizon": args.horizon,
-                    "n_obs_steps": n_obs_steps,
-                },
-                f,
-            )
-
-        if record_this_trial:
-            save_this_video = result_str != "success" if args.record_failures else n_total <= video_budget
-            if save_this_video:
+        if record_flag:
+            save_this = result_str != "success" if args.record_failures else n_total <= video_budget
+            if save_this:
                 video_path = videos_dir / f"trial_{n_total:04d}_{result_str}.mp4"
                 _write_mp4(rollout_result["frames"], video_path)
                 print(f"  Saved video: {video_path.name}")
@@ -469,10 +519,84 @@ if __name__ == "__main__":
             f"Trial {n_total}/{args.n_rollouts}: "
             f"result={result_str}, "
             f"steps={rollout_result['steps']}, "
-            f"reward={rollout_result['total_reward']:.3f}, "
-            f"time={elapsed:.1f}s  "
-            f"running {n_success}/{n_total} ({success_rate:.1%})"
+            f"reward={rollout_result['total_reward']:.3f}  "
+            f"running {n_success}/{n_total} ({n_success / n_total:.1%})"
         )
+        return n_success, n_total
+
+    def _flush_state() -> None:
+        csv_file.flush()
+        _write_summary(n_success, n_total, args.n_rollouts, all_trial_records, summary_path)
+        with open(out_dir / "results.pkl", "wb") as f:
+            pickle.dump(
+                {
+                    "trials": all_trial_records,
+                    "n_success": n_success,
+                    "n_total": n_total,
+                    "success_rate": n_success / n_total,
+                    "checkpoint": args.checkpoint,
+                    "horizon": args.horizon,
+                    "n_obs_steps": n_obs_steps,
+                },
+                f,
+            )
+
+    if args.n_envs == 1:
+        # ---- serial path ------------------------------------------------
+        for trial_idx in range(n_total, args.n_rollouts):
+            record_flag = _record_this(trial_idx)
+            t_start = time.time()
+            rollout_result = run_rollout(
+                env=env,
+                policy=policy,
+                n_obs_steps=n_obs_steps,
+                horizon=args.horizon,
+                device=device,
+                obs_keys=policy_obs_keys,
+                n_action_steps=n_action_steps,
+                render=not args.headless,
+                record_video=record_flag,
+                camera_names=camera_names,
+            )
+            n_success, n_total = _process_result(rollout_result, record_flag, n_success, n_total)
+            _flush_state()
+            print(f"  wall time: {time.time() - t_start:.1f}s")
+
+    else:
+        # ---- parallel path ----------------------------------------------
+        # Each spawned worker loads its own policy + env via _init_worker.
+        # imap_unordered keeps all workers busy: a new rollout is dispatched
+        # to a worker as soon as it finishes, with no batch-level waiting.
+        print(f"Spawning {args.n_envs} worker processes (each loads its own model copy)...")
+        ctx = mp.get_context("spawn")
+        pool = ctx.Pool(
+            processes=args.n_envs,
+            initializer=_init_worker,
+            initargs=(
+                args.checkpoint,
+                dataset_path,
+                args.env,
+                is_image_policy,
+                args.horizon,
+                n_obs_steps,
+                policy_obs_keys,
+                n_action_steps,
+                camera_names,
+                args.device,
+                args.save_video,
+            ),
+        )
+
+        remaining = args.n_rollouts - n_total
+        record_flags = [_record_this(n_total + j) for j in range(remaining)]
+
+        for rollout_result in pool.imap_unordered(_worker_run_rollout, record_flags):
+            record_flag = rollout_result.pop("_record_flag")
+            n_success, n_total = _process_result(rollout_result, record_flag, n_success, n_total)
+            _flush_state()
+
+        pool.close()
+        pool.join()
 
     csv_file.close()
 
