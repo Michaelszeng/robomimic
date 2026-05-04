@@ -1,5 +1,41 @@
 # robomimic
 
+## Michael's Notes
+
+Dataset Download: https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/tool_hang/ph/demo_v15.hdf5?download=true
+
+Post-process Dataset: 
+```bash
+python robomimic/scripts/dataset_states_to_obs.py --done_mode 2 \
+--dataset $BASE_DATASET_DIR/tool_hang/ph/demo_v15.hdf5 \
+--output_name image_v15.hdf5 --camera_names sideview robot0_eye_in_hand --camera_height 240 --camera_width 240
+```
+
+*Environment setup:*
+```bash
+python -m venv env
+source ~/robomimic/env/bin/activate
+pip install -e .
+
+cd ~
+git clone https://github.com/ARISE-Initiative/robosuite.git
+cd robosuite
+pip install -r requirements.txt
+```
+
+
+*Evaluating a policy trained using [diffusion-policy-experiments](https://github.com/Michaelszeng/diffusion-policy-experiments):*
+
+Install:
+```bash
+source ~/robomimic/env/bin/activate
+pip install --no-deps --ignore-requires-python -e ~/diffusion-policy
+pip install dill omegaconf hydra-core==1.3.2 einops diffusers==0.11.1 accelerate pandas zarr
+pip install -e PATH-TO/diffusion-policy-experiments
+```
+
+
+
 <p align="center">
   <img width="24.0%" src="docs/images/task_lift.gif">
   <img width="24.0%" src="docs/images/task_can.gif">
