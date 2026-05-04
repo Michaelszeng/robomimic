@@ -1,3 +1,6 @@
+outputs/
+logs/
+
 # pip distribution folder
 dist/
 

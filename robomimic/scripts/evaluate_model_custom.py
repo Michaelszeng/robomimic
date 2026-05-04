@@ -15,12 +15,6 @@ Usage:
         --output-dir outputs/my_run --resume
 """
 
-SEED = 42
-DATASET_PATH = os.environ.get(
-    "ROBOMIMIC_DATASET_PATH",
-    "/home/michzeng/diffusion-policy/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5",
-)
-
 import argparse
 import collections
 import csv
@@ -44,6 +38,12 @@ import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.file_utils as FileUtils
 from robomimic.envs.env_base import EnvBase
 from robomimic.envs.wrappers import EnvWrapper
+
+SEED = 42
+DATASET_PATH = os.environ.get(
+    "ROBOMIMIC_DATASET_PATH",
+    "/home/michzeng/diffusion-policy/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5",
+)
 
 # Required so hydra configs that embed "${eval:...}" expressions can be loaded.
 OmegaConf.register_new_resolver("eval", eval, replace=True)
