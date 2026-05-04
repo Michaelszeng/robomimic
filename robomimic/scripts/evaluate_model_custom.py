@@ -239,7 +239,8 @@ _worker_state: dict = {}
 
 
 def _init_worker(
-    policy,
+    checkpoint_path,
+    video_worker_claimed,
     dataset_path,
     env_name,
     is_image_policy,
@@ -251,10 +252,10 @@ def _init_worker(
     device_str,
     save_video,
 ):
-    """Pool initializer: receive shared-memory policy + create env once per worker.
+    """Pool initializer: load policy + env once per worker process.
 
-    The policy weights live in shared memory (set up by the main process via
-    share_memory()), so no per-worker copy of the weight data is made.
+    Only the first worker to initialise claims the video-recording role.
+    All other workers skip offscreen rendering, saving OpenGL framebuffer memory.
     """
     global _worker_state
     worker_seed = SEED + os.getpid()
@@ -262,18 +263,20 @@ def _init_worker(
     torch.manual_seed(worker_seed)
 
     device = torch.device(device_str)
-    # Moving to device is a no-op if already on CPU (shared memory stays shared).
-    # If CUDA is requested, this copies the shared CPU tensors to the worker's GPU.
-    policy = policy.to(device).eval()
-    if hasattr(policy, "obs_encoder"):
-        policy.obs_encoder.eval()
+    policy, _ = load_policy(checkpoint_path, device)
+
+    # Exactly one worker gets video-recording capability.
+    with video_worker_claimed.get_lock():
+        can_record = save_video and not video_worker_claimed.value
+        if can_record:
+            video_worker_claimed.value = True
 
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
     env = EnvUtils.create_env_from_metadata(
         env_meta=env_meta,
         env_name=env_name,
-        render=False,  # on-screen rendering is not supported in worker processes
-        render_offscreen=save_video,
+        render=False,
+        render_offscreen=can_record,  # only the designated worker allocates framebuffers
         use_image_obs=is_image_policy,
     )
 
@@ -287,6 +290,7 @@ def _init_worker(
             "obs_keys": policy_obs_keys,
             "n_action_steps": n_action_steps,
             "camera_names": camera_names,
+            "can_record": can_record,
         }
     )
 
@@ -294,6 +298,8 @@ def _init_worker(
 def _worker_run_rollout(record_video: bool) -> dict:
     """Called in each worker process to run one rollout."""
     s = _worker_state
+    # Only the designated video worker actually records frames.
+    actual_record = record_video and s["can_record"]
     result = run_rollout(
         env=s["env"],
         policy=s["policy"],
@@ -303,12 +309,10 @@ def _worker_run_rollout(record_video: bool) -> dict:
         obs_keys=s["obs_keys"],
         n_action_steps=s["n_action_steps"],
         render=False,
-        record_video=record_video,
+        record_video=actual_record,
         camera_names=s["camera_names"],
     )
-    # Carry record_video through so the main process knows whether frames exist,
-    # since results arrive out of order with imap_unordered.
-    result["_record_flag"] = record_video
+    result["_record_flag"] = actual_record
     return result
 
 
@@ -575,22 +579,18 @@ if __name__ == "__main__":
 
     else:
         # ---- parallel path ----------------------------------------------
-        # Model weights are placed in shared memory once in the main process.
-        # torch.multiprocessing's ForkingPickler sends storage handles rather
-        # than copying data, so all workers map the same physical pages.
         # imap_unordered keeps all workers busy with no batch-level waiting.
-        policy = policy.to("cpu")
-        policy.share_memory()
-        print(
-            f"Spawning {args.n_envs} worker processes "
-            f"(model weights shared, not copied)..."
-        )
+        # Only 1 worker is designated for video recording; the rest skip
+        # offscreen rendering entirely to save OpenGL framebuffer memory.
         ctx = mp.get_context("spawn")
+        video_worker_claimed = ctx.Value("b", False)
+        print(f"Spawning {args.n_envs} worker processes...")
         pool = ctx.Pool(
             processes=args.n_envs,
             initializer=_init_worker,
             initargs=(
-                policy,
+                args.checkpoint,
+                video_worker_claimed,
                 dataset_path,
                 args.env,
                 is_image_policy,
