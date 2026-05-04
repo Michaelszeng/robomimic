@@ -16,6 +16,10 @@ Usage:
 """
 
 SEED = 42
+DATASET_PATH = os.environ.get(
+    "ROBOMIMIC_DATASET_PATH",
+    "/home/michzeng/diffusion-policy/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5",
+)
 
 import argparse
 import collections
@@ -79,7 +83,7 @@ def load_policy(checkpoint_path: str, device: torch.device):
     normalizer_path = ckpt_path.parent.parent / "normalizer.pt"
     if normalizer_path.exists():
         print(f"Loading normalizer from {normalizer_path}")
-        normalizer = torch.load(normalizer_path)
+        normalizer = torch.load(normalizer_path, weights_only=False)
     else:
         print(f"Normalizer not found at {normalizer_path}, generating from dataset...")
         dataset = hydra.utils.instantiate(cfg.task.dataset)
@@ -423,7 +427,7 @@ if __name__ == "__main__":
     # --- environment ---
     # The training dataset embeds env_args (env name + kwargs) written by
     # robomimic at data-collection time; use those to reconstruct the env.
-    dataset_path = "/home/michzeng/diffusion-policy/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5"
+    dataset_path = DATASET_PATH
     print(f"Loading env metadata from dataset: {dataset_path}")
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
     is_image_policy = any(v.get("type") == "rgb" for v in cfg.shape_meta.obs.values())

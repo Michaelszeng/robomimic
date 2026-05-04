@@ -45,6 +45,8 @@ N_ROLLOUTS=500
 N_VIDEO_TRIALS=20
 
 HORIZON=450
+
+export ROBOMIMIC_DATASET_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5"
 # ============================================================================
 
 EXPERIMENT_NAME="$(basename "$(dirname "${CHECKPOINT_PATH}")")"

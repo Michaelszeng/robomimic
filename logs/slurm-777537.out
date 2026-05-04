@@ -123,3 +123,8 @@ Loading env metadata from dataset: /home/michzeng/diffusion-policy/data/diffusio
 Checkpoint: epoch=135-val_loss=0.1393-val_ddim_mse=0.046313
 Action horizon: 6  ->  outputs/2_obs_tool_hang_film/T_a_6/epoch=135-val_loss=0.1393-val_ddim_mse=0.046313
 ##########################################
+ROBOMIMIC WARNING(
+    No private macro file found!
+    It is recommended to use a private macro file
+    To setup, run: python /data/locomotion/michzeng/robomimic/robomimic/scripts/setup_macros.py
+)
