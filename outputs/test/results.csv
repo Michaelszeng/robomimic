@@ -1,0 +1,16 @@
+trial,result,reward,steps
+1,failure,0.0,400
+2,failure,0.0,400
+3,failure,0.0,400
+4,success,1.0,379
+5,success,1.0,357
+6,success,1.0,381
+7,success,1.0,424
+8,success,1.0,430
+9,success,1.0,480
+10,success,1.0,378
+11,success,1.0,379
+12,success,1.0,401
+13,success,1.0,451
+14,success,1.0,375
+15,success,1.0,419

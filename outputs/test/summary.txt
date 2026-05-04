@@ -1,0 +1,5 @@
+Trials completed : 15 / 20
+Successes        : 12
+Failures         : 3
+Success rate     : 80.0%
+Avg trial steps  : 403.6

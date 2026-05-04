@@ -29,11 +29,31 @@ pip install -r requirements.txt
 Install:
 ```bash
 source ~/robomimic/env/bin/activate
-pip install --no-deps --ignore-requires-python -e ~/diffusion-policy
+pip install --no-deps --ignore-requires-python -e PATH-TO/diffusion-policy-experiments
 pip install dill omegaconf hydra-core==1.3.2 einops diffusers==0.11.1 accelerate pandas zarr
-pip install -e PATH-TO/diffusion-policy-experiments
 ```
 
+### Installing on CSAIL Cluster:
+
+- Clone this repository in your persistent storage location
+```bash
+python3 -m venv env --without-pip
+curl -sS https://bootstrap.pypa.io/get-pip.py -o /data/locomotion/michzeng/get-pip.py
+python3 /data/locomotion/michzeng/get-pip.py --no-warn-script-location
+```
+- Activate the `venv`:
+```bash
+source env/bin/activate
+pip install -e .
+
+# Install robosuite
+pip install robosuite --no-deps
+pip install "numpy>=1.13.3" "numba>=0.49.1" "scipy>=1.2.3" "mujoco>=3.3.0" "mink==0.0.5" "qpsolvers[quadprog]>=4.3.1" Pillow opencv-python termcolor pytest tqdm
+
+# Install diffusion-policy-experiments
+pip install --no-deps --ignore-requires-python -e PATH-TO/diffusion-policy-experiments
+pip install dill omegaconf hydra-core==1.3.2 einops diffusers==0.11.1 accelerate pandas zarr
+```
 
 
 <p align="center">
