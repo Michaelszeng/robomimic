@@ -19,7 +19,7 @@ import argparse
 import collections
 import csv
 import datetime
-import multiprocessing as mp
+import torch.multiprocessing as mp
 import os
 import pickle
 import time
@@ -239,7 +239,7 @@ _worker_state: dict = {}
 
 
 def _init_worker(
-    checkpoint_path,
+    policy,
     dataset_path,
     env_name,
     is_image_policy,
@@ -251,15 +251,22 @@ def _init_worker(
     device_str,
     save_video,
 ):
-    """Pool initializer: load policy + env once per worker process."""
+    """Pool initializer: receive shared-memory policy + create env once per worker.
+
+    The policy weights live in shared memory (set up by the main process via
+    share_memory()), so no per-worker copy of the weight data is made.
+    """
     global _worker_state
-    # Seed each worker differently so rollouts diverge.
     worker_seed = SEED + os.getpid()
     np.random.seed(worker_seed)
     torch.manual_seed(worker_seed)
 
     device = torch.device(device_str)
-    policy, _ = load_policy(checkpoint_path, device)
+    # Moving to device is a no-op if already on CPU (shared memory stays shared).
+    # If CUDA is requested, this copies the shared CPU tensors to the worker's GPU.
+    policy = policy.to(device).eval()
+    if hasattr(policy, "obs_encoder"):
+        policy.obs_encoder.eval()
 
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
     env = EnvUtils.create_env_from_metadata(
@@ -568,16 +575,22 @@ if __name__ == "__main__":
 
     else:
         # ---- parallel path ----------------------------------------------
-        # Each spawned worker loads its own policy + env via _init_worker.
-        # imap_unordered keeps all workers busy: a new rollout is dispatched
-        # to a worker as soon as it finishes, with no batch-level waiting.
-        print(f"Spawning {args.n_envs} worker processes (each loads its own model copy)...")
+        # Model weights are placed in shared memory once in the main process.
+        # torch.multiprocessing's ForkingPickler sends storage handles rather
+        # than copying data, so all workers map the same physical pages.
+        # imap_unordered keeps all workers busy with no batch-level waiting.
+        policy = policy.to("cpu")
+        policy.share_memory()
+        print(
+            f"Spawning {args.n_envs} worker processes "
+            f"(model weights shared, not copied)..."
+        )
         ctx = mp.get_context("spawn")
         pool = ctx.Pool(
             processes=args.n_envs,
             initializer=_init_worker,
             initargs=(
-                args.checkpoint,
+                policy,
                 dataset_path,
                 args.env,
                 is_image_policy,
