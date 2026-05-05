@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=evaluate_checkpoints
 #SBATCH --account=locomotion
-#SBATCH --partition=vision-shared-rtx3090
+#SBATCH --partition=vision-shared-titanrtx
 #SBATCH --exclude=freeman-titanrtx-2,freeman-titanrtx-1,oliva-titanrtx-3
 #SBATCH --qos=shared-if-available
 #SBATCH --nodes=1
@@ -40,7 +40,7 @@ CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/out
 # CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/16_obs_tool_hang_double_enc/checkpoints"
 # CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/20_obs_tool_hang_double_enc/checkpoints"
 
-N_ENVS=16
+N_ENVS=8
 N_ROLLOUTS=500
 N_VIDEO_TRIALS=20
 

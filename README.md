@@ -52,7 +52,7 @@ python3 -m pip install "numpy>=1.13.3" "numba>=0.49.1" "scipy>=1.2.3" "mujoco>=3
 
 # Install diffusion-policy-experiments
 python3 -m pip install --no-deps --ignore-requires-python -e PATH-TO/diffusion-policy-experiments
-python3 -m pip install dill omegaconf hydra-core==1.3.2 einops diffusers==0.11.1 accelerate pandas zarr
+python3 -m pip install dill omegaconf hydra-core==1.3.2 einops diffusers==0.11.1 accelerate pandas zarr statsmodels
 ```
 
 
