@@ -33,7 +33,7 @@ echo "N_ACTION_STEPS: $N_ACTION_STEPS"
 # ============================================================================
 # Path to a .ckpt file or a directory of .ckpt files.
 
-CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/checkpoints"
+CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-pboolicy-experiments/data/outputs/robomimic/2_obs_tool_hang_film/checkpoints"
 # CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/2_obs_tool_hang_double_enc/checkpoints"
 # CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/4_obs_tool_hang_double_enc/checkpoints"
 # CHECKPOINT_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/outputs/robomimic/8_obs_tool_hang_double_enc/checkpoints"
@@ -44,7 +44,7 @@ N_ENVS=8
 N_ROLLOUTS=500
 N_VIDEO_TRIALS=20
 
-HORIZON=450
+HORIZON=700  # 700 is default for tool-hang
 
 export ROBOMIMIC_DATASET_PATH="/data/locomotion/michzeng/diffusion-policy-experiments/data/diffusion_experiments/robomimic/tool_hang/ph/image_v15.hdf5"
 # ============================================================================
