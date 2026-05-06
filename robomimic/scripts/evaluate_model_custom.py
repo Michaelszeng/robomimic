@@ -251,11 +251,15 @@ def _init_worker(
     camera_names,
     device_str,
     save_video,
+    n_video_trials,
+    record_failures,
 ):
     """Pool initializer: load policy + env once per worker process.
 
     Only the first worker to initialise claims the video-recording role.
     All other workers skip offscreen rendering, saving OpenGL framebuffer memory.
+    The video worker tracks its own videos_recorded counter so it always
+    produces exactly n_video_trials videos regardless of task ordering.
     """
     global _worker_state
     worker_seed = SEED + os.getpid()
@@ -291,15 +295,25 @@ def _init_worker(
             "n_action_steps": n_action_steps,
             "camera_names": camera_names,
             "can_record": can_record,
+            "n_video_trials": n_video_trials,
+            "record_failures": record_failures,
+            "videos_recorded": 0,
         }
     )
 
 
-def _worker_run_rollout(record_video: bool) -> dict:
+def _worker_run_rollout(_) -> dict:
     """Called in each worker process to run one rollout."""
     s = _worker_state
-    # Only the designated video worker actually records frames.
-    actual_record = record_video and s["can_record"]
+    # The video worker records until its budget is met (or always, for failure mode).
+    if s["can_record"]:
+        if s["record_failures"]:
+            do_record = True  # record everything; main process filters to failures
+        else:
+            do_record = s["videos_recorded"] < s["n_video_trials"]
+    else:
+        do_record = False
+
     result = run_rollout(
         env=s["env"],
         policy=s["policy"],
@@ -309,10 +323,17 @@ def _worker_run_rollout(record_video: bool) -> dict:
         obs_keys=s["obs_keys"],
         n_action_steps=s["n_action_steps"],
         render=False,
-        record_video=actual_record,
+        record_video=do_record,
         camera_names=s["camera_names"],
     )
-    result["_record_flag"] = actual_record
+
+    # For non-failure mode, count only confirmed recordings.
+    if do_record and not s["record_failures"]:
+        s["videos_recorded"] += 1
+
+    # For failure mode, only flag failures so main process knows to save them.
+    record_flag = do_record and (result["result"] != "success" if s["record_failures"] else True)
+    result["_record_flag"] = record_flag
     return result
 
 
@@ -505,8 +526,9 @@ if __name__ == "__main__":
     video_budget = args.n_video_trials if args.n_video_trials >= 0 else args.n_rollouts
 
     def _record_this(trial_idx_0based: int) -> bool:
+        """Whether to collect frames for this trial in the serial path."""
         if args.record_failures:
-            return args.save_video
+            return args.save_video  # collect for all; filter to failures after
         return args.save_video and (trial_idx_0based < video_budget)
 
     def _process_result(rollout_result: dict, record_flag: bool, n_success: int, n_total: int):
@@ -524,11 +546,9 @@ if __name__ == "__main__":
         csv_writer.writerow(record)
 
         if record_flag:
-            save_this = result_str != "success" if args.record_failures else n_total <= video_budget
-            if save_this:
-                video_path = videos_dir / f"trial_{n_total:04d}_{result_str}.mp4"
-                _write_mp4(rollout_result["frames"], video_path)
-                print(f"  Saved video: {video_path.name}")
+            video_path = videos_dir / f"trial_{n_total:04d}_{result_str}.mp4"
+            _write_mp4(rollout_result["frames"], video_path)
+            print(f"  Saved video: {video_path.name}")
 
         print(
             f"Trial {n_total}/{args.n_rollouts}: "
@@ -573,6 +593,9 @@ if __name__ == "__main__":
                 record_video=record_flag,
                 camera_names=camera_names,
             )
+            # For record_failures mode, frames were collected but we only save failures.
+            if record_flag and args.record_failures:
+                record_flag = rollout_result["result"] != "success"
             n_success, n_total = _process_result(rollout_result, record_flag, n_success, n_total)
             _flush_state()
             print(f"  wall time: {time.time() - t_start:.1f}s")
@@ -601,13 +624,14 @@ if __name__ == "__main__":
                 camera_names,
                 args.device,
                 args.save_video,
+                video_budget,
+                args.record_failures,
             ),
         )
 
         remaining = args.n_rollouts - n_total
-        record_flags = [_record_this(n_total + j) for j in range(remaining)]
 
-        for rollout_result in pool.imap_unordered(_worker_run_rollout, record_flags):
+        for rollout_result in pool.imap_unordered(_worker_run_rollout, range(remaining)):
             record_flag = rollout_result.pop("_record_flag")
             n_success, n_total = _process_result(rollout_result, record_flag, n_success, n_total)
             _flush_state()
